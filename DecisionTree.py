@@ -178,7 +178,7 @@ class DecisionTreeClassifier(Predictor, Estimator):
             The entropy of the label distribution.
         """
         class_probabilities = [len(labels[labels == c]) / len(labels) for c in np.unique(labels)]
-        entropy = -np.sum(p * np.log2(p) for p in class_probabilities if p > 0)
+        entropy = -np.sum([p * np.log2(p) for p in class_probabilities if p > 0])
         return entropy
 
     def _predict_tree(self, x, tree):
@@ -313,7 +313,7 @@ class DecisionTreeRegressor(Predictor, Estimator):
 
         left_indices = X[:, feature_index] < threshold
         X_left, y_left = X[left_indices], y[left_indices]
-        X_right, y_right = X[~left_indices], y[~right_indices]
+        X_right, y_right = X[~left_indices], y[~left_indices]
 
         left_subtree = self._build_tree(X_left, y_left, depth + 1)
         right_subtree = self._build_tree(X_right, y_right, depth + 1)

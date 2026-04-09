@@ -1,12 +1,12 @@
 import numpy as np
-from .GLASSBOX import Estimator
-from .GLASSBOX import Predictor
+from Estimator import Estimator
+from Predictor import Predictor
 from numpy import log, dot, exp, shape
 import matplotlib.pyplot as plt
 from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
 
-class LinearModel(Predictor.Predictor, Estimator.Estimator):
+class LinearModel(Predictor, Estimator):
     """
     A linear model for regression or classification.
 
