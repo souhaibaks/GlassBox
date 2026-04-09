@@ -1,6 +1,6 @@
 import numpy as np
-from . import Estimator
-from . import Predictor
+from .GLASSBOX import Estimator
+from .GLASSBOX import Predictor
 from numpy import log, dot, exp, shape
 import matplotlib.pyplot as plt
 from sklearn.datasets import make_classification

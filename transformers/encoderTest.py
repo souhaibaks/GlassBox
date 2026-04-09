@@ -1,4 +1,4 @@
-from Encoders import OrdinalEncoder, OneHotEncoder, LabelEncoder
+from transformers.Encoders import OrdinalEncoder, OneHotEncoder, LabelEncoder
 
 # Sample data
 data = ['cat', 'dog', 'fish', 'dog', 'cat', 'fish']
