@@ -1,5 +1,7 @@
 # GlassBox-AutoML
 
+[![PyPI version](https://badge.fury.io/py/glassbox-automl-amisouhaymmo.svg)](https://pypi.org/project/glassbox-automl-amisouhaymmo/)
+
 A simple **white-box Automated Machine Learning library** in Python,
 using only NumPy at runtime. The goal is to keep everything easy to read
 and understand.
@@ -86,7 +88,7 @@ pip install -e .
 ### Option C — From PyPI
 
 ```bash
-pip install glassbox-automl
+pip install glassbox-automl-amisouhaymmo
 ```
 
 ---
