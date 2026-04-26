@@ -4,21 +4,9 @@ from collections import defaultdict
 from typing import List, Tuple, Any, Union
 
 def train_test_split(X: np.ndarray, y: np.ndarray, test_size: float = 0.25, random_state: int = None, stratify: Union[List[Any], np.ndarray, None] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Splits the data into training and testing sets.
+    """Split arrays into random train and test subsets (optionally stratified).
 
-    Parameters:
-    - X: array-like, feature set.
-    - y: array-like, labels.
-    - test_size: float, the proportion of the dataset to include in the test split.
-    - random_state: int, seed used by the random number generator.
-    - stratify: array-like, if not None, data is split in a stratified fashion using this as the class labels.
-
-    Returns:
-    - X_train: np.ndarray, the training set features.
-    - X_test: np.ndarray, the testing set features.
-    - y_train: np.ndarray, the training set labels.
-    - y_test: np.ndarray, the testing set labels.
+    If `stratify` is provided, the split preserves label proportions.
     """
     
     if not isinstance(X, (np.ndarray, list)) or not isinstance(y, (np.ndarray, list)):
@@ -65,22 +53,3 @@ def train_test_split(X: np.ndarray, y: np.ndarray, test_size: float = 0.25, rand
     y_train, y_test = y[train_indices], y[test_indices]
     
     return X_train, X_test, y_train, y_test
-
-# Example usage
-if __name__ == "__main__":
-    from sklearn.datasets import load_iris
-
-    def test_decision_tree_classifier():
-        # Load the iris dataset
-        iris = load_iris()
-        X, y = iris.data, iris.target
-
-        # Split the data into training and test sets
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42, stratify=y)
-
-        #clf = DecisionTreeClassifier()
-        #clf.fit(X_train, y_train)
-        #accuracy = clf.score(X_test, y_test)
-        #print(f"Accuracy: {accuracy}")
-    
-    test_decision_tree_classifier()

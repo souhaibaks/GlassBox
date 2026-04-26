@@ -1,11 +1,18 @@
-from .metric import F1Score
-from .metric import Precision
-from .metric import Recall
-from .metric import MeanSquaredError
-from .metric import MeanAbsoluteError
-from .metric import Accuracy
-from .metric import ConfusionMatrix
-from .metric import R2Score
+from .metric import (
+    Metric,
+    Accuracy,
+    Precision,
+    Recall,
+    F1Score,
+    ConfusionMatrix,
+    MeanAbsoluteError,
+    MeanSquaredError,
+    R2Score,
+    classification_report,
+)
 
-
-
+__all__ = [
+    'Metric', 'Accuracy', 'Precision', 'Recall', 'F1Score',
+    'ConfusionMatrix', 'MeanAbsoluteError', 'MeanSquaredError',
+    'R2Score', 'classification_report',
+]

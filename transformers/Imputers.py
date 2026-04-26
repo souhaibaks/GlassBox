@@ -1,142 +1,96 @@
 import numpy as np
-import pandas as pd
 from .Transfomer import Transformer
-import LinearModel
 
 
 class Imputer(Transformer):
-    """Base class for imputers."""
     pass
 
+
 class SimpleImputer(Imputer):
-    """Simple imputer."""
-    def __init__(self):
-        """
-        Initializes the SimpleImputer.
-        """
-        super().__init__()
-        self.fill_value = None
+    #Fill NaNs per column using mean/median/mode
 
-    def fit(self, X, y=None, strategy='median'):
-        """
-        Fits the imputer on the data using the specified strategy.
+    def __init__(self, strategy='mean'):
+        self.strategy = strategy
+        self.fill_values_ = None  # one fill value per column
 
-        Parameters:
-            X (array-like): Input data.
-            y (array-like, optional): Target data.
-            strategy (str): Strategy for imputation ('mean', 'median', 'mode').
+    def fit(self, X, y=None):
+        #Compute per-column fill values (ignoring NaNs)
+        X = np.asarray(X, dtype=float)
+        n_cols = X.shape[1] if X.ndim == 2 else 1
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
 
-        Returns:
-            self: Returns the instance itself.
-        """
-        if strategy == 'mean':
-            self.fill_value = np.nanmean(X)
-        elif strategy == 'median':
-            self.fill_value = np.nanmedian(X)
-        elif strategy == 'mode':
-            self.fill_value = pd.Series(X).mode().iloc[0]
-        else:
-            raise ValueError(f"Unknown strategy: {strategy}")
+        self.fill_values_ = np.zeros(n_cols)
+        for col in range(n_cols):
+            col_data = X[:, col]
+            valid = col_data[~np.isnan(col_data)]
+            if len(valid) == 0:
+                self.fill_values_[col] = 0.0
+            elif self.strategy == 'mean':
+                self.fill_values_[col] = np.mean(valid)
+            elif self.strategy == 'median':
+                self.fill_values_[col] = np.median(valid)
+            elif self.strategy == 'mode':
+                values, counts = np.unique(valid, return_counts=True)
+                self.fill_values_[col] = values[np.argmax(counts)]
+            else:
+                raise ValueError(f"Unknown strategy: '{self.strategy}'. "
+                                 f"Use 'mean', 'median', or 'mode'.")
         return self
 
     def transform(self, X):
-        """
-        Transforms the data using the fitted imputer.
+        #Replace NaN values with the fitted fill values
+        if self.fill_values_ is None:
+            raise RuntimeError("SimpleImputer has not been fitted yet.")
+        X = np.asarray(X, dtype=float)
+        was_1d = X.ndim == 1
+        if was_1d:
+            X = X.reshape(-1, 1)
+        X_filled = X.copy()
+        for col in range(X_filled.shape[1]):
+            mask = np.isnan(X_filled[:, col])
+            X_filled[mask, col] = self.fill_values_[col]
+        return X_filled.ravel() if was_1d else X_filled
 
-        Parameters:
-            X (array-like): Input data.
+    def get_params(self):
+        return {'strategy': self.strategy}
 
-        Returns:
-            array-like: Transformed data.
-        """
-        return np.where(pd.isnull(X), self.fill_value, X)
-    
-class IterativeImputer(Imputer):
-    """Iterative imputer."""
-    def __init__(self):
-        """
-        Initializes the IterativeImputer.
-        """
-        super().__init__()
-        self.estimator = None
-
-    def fit(self, X, y=None, estimator=None):
-        """
-        Fits the imputer on the data using the specified estimator.
-
-        Parameters:
-            X (array-like): Input data.
-            y (array-like, optional): Target data.
-            estimator (object): Estimator to use for imputation.
-
-        Returns:
-            self: Returns the instance itself.
-        """
-        if estimator is None:
-            estimator = LinearModel.LinearRegression()
-        self.estimator = estimator
-        self.estimator.fit(X, y)
-        return self
-
-    def transform(self, X):
-        """
-        Transforms the data using the fitted estimator.
-
-        Parameters:
-            X (array-like): Input data.
-
-        Returns:
-            array-like: Transformed data.
-        """
-        return self.estimator.predict(X)
 
 class KNNImputer(Imputer):
-    """KNN imputer."""
-    def __init__(self):
-        """
-        Initializes the KNNImputer.
-        """
-        super().__init__()
-        self.k = None
-        self.X_train = None
+    #Impute NaNs using KNN over non-missing features
 
-    def fit(self, X, y=None, k=5):
-        """
-        Fits the imputer on the data using k-nearest neighbors.
-
-        Parameters:
-            X (array-like): Input data.
-            y (array-like, optional): Target data.
-            k (int): Number of neighbors to use for imputation.
-
-        Returns:
-            self: Returns the instance itself.
-        """
+    def __init__(self, k=5):
         self.k = k
-        self.X_train = X.copy()
+        self.X_train_ = None
+
+    def fit(self, X, y=None):
+        self.X_train_ = np.asarray(X, dtype=float).copy()
         return self
-    
+
     def transform(self, X):
-        """
-        Transforms the data using k-nearest neighbors.
-
-        Parameters:
-            X (array-like): Input data.
-
-        Returns:
-            array-like: Transformed data.
-        """
+        if self.X_train_ is None:
+            raise RuntimeError("KNNImputer has not been fitted yet.")
+        X = np.asarray(X, dtype=float)
         X_imputed = X.copy()
+        n_cols = X.shape[1]
         for i in range(X.shape[0]):
-            for j in range(X.shape[1]):
+            for j in range(n_cols):
                 if np.isnan(X[i, j]):
-                    # Find k nearest neighbors based on other features
+                    other_cols = np.arange(n_cols) != j
+                    row = X[i, other_cols]
                     distances = []
-                    for ii in range(self.X_train.shape[0]):
-                        if not np.isnan(self.X_train[ii, j]):
-                            dist = np.linalg.norm(self.X_train[ii, np.arange(X.shape[1]) != j] - X[i, np.arange(X.shape[1]) != j])
-                            distances.append((dist, self.X_train[ii, j]))
-                    distances.sort()
+                    for ii in range(self.X_train_.shape[0]):
+                        if not np.isnan(self.X_train_[ii, j]):
+                            train_row = self.X_train_[ii, other_cols]
+                            # Skip rows with missing context features.
+                            if np.any(np.isnan(train_row)) or np.any(np.isnan(row)):
+                                continue
+                            dist = np.linalg.norm(train_row - row)
+                            distances.append((dist, self.X_train_[ii, j]))
+                    distances.sort(key=lambda x: x[0])
                     neighbors = [d[1] for d in distances[:self.k]]
-                    X_imputed[i, j] = np.mean(neighbors)
+                    X_imputed[i, j] = np.mean(neighbors) if neighbors else 0.0
         return X_imputed
+
+    def get_params(self):
+        return {'k': self.k}

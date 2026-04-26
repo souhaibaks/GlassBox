@@ -1,99 +1,76 @@
+"""Random search over hyperparameters with cross-validation."""
+
 import numpy as np
-import random
 from typing import Dict, Any, List, Union
 
-class RandomSearch:
-    def __init__(self, model, param_distributions: Dict[str, List[Any]], n_iter: int = 10, random_state: Union[int, None] = None):
-        """
-        Initializes the RandomSearch with a model, parameter distributions, and the number of iterations.
 
-        Parameters:
-        - model: The machine learning model to be tuned.
-        - param_distributions: Dictionary where keys are parameter names and values are lists of parameter settings to sample from.
-        - n_iter: Number of parameter settings that are sampled.
-        - random_state: Seed for the random number generator.
-        """
+class RandomSearch:
+    """Stochastic hyperparameter search with K-fold cross-validation."""
+
+    def __init__(self, model, param_distributions: Dict[str, List[Any]],
+                 n_iter: int = 10, cv: int = 5,
+                 scoring=None, random_state: Union[int, None] = None):
         self.model = model
         self.param_distributions = param_distributions
         self.n_iter = n_iter
+        self.cv = cv
+        self.scoring = scoring
         self.random_state = random_state
         self.best_params_ = None
         self.best_score_ = -np.inf
         self.results_ = []
 
-        if random_state is not None:
-            np.random.seed(random_state)
-            random.seed(random_state)
+    def _cv_score(self, X, y, params, rng):
+        """Fit model with params using K-Fold CV and return mean score."""
+        self.model.set_params(**params)
+        n_samples = len(y)
+        indices = np.arange(n_samples)
+        rng.shuffle(indices)
+        fold_sizes = np.full(self.cv, n_samples // self.cv, dtype=int)
+        fold_sizes[:n_samples % self.cv] += 1
+        current = 0
+        scores = []
+        for fold_size in fold_sizes:
+            test_idx = indices[current:current + fold_size]
+            train_idx = np.concatenate([indices[:current],
+                                        indices[current + fold_size:]])
+            X_train, X_test = X[train_idx], X[test_idx]
+            y_train, y_test = y[train_idx], y[test_idx]
+            self.model.fit(X_train, y_train)
+            if self.scoring:
+                s = self.scoring(y_test, self.model.predict(X_test))
+            else:
+                s = self.model.score(X_test, y_test)
+            scores.append(s)
+            current += fold_size
+        return float(np.mean(scores))
 
     def fit(self, X, y):
-        """
-        Performs random search over the parameter distributions.
+        X, y = np.asarray(X), np.asarray(y)
+        rng = np.random.RandomState(self.random_state)
+        self.results_ = []
+        self.best_score_ = -np.inf
 
-        Parameters:
-        - X: Training data.
-        - y: Training labels.
-        """
-        param_names = list(self.param_distributions.keys())
-        param_values = list(self.param_distributions.values())
-        
         for _ in range(self.n_iter):
-            params = {name: random.choice(values) for name, values in zip(param_names, param_values)}
-            self.model.set_params(**params)
-            self.model.fit(X, y)
-            score = self.model.score(X, y)
-            
-            self.results_.append({
-                'params': params,
-                'score': score
-            })
-
+            params = {
+                name: rng.choice(values)
+                for name, values in self.param_distributions.items()
+            }
+            score = self._cv_score(X, y, params, rng)
+            self.results_.append({'params': params, 'mean_cv_score': score})
             if score > self.best_score_:
                 self.best_score_ = score
-                self.best_params_ = params
+                self.best_params_ = dict(params)
 
-    def get_best_params(self) -> Dict[str, Any]:
-        """
-        Returns the best parameters found during the random search.
-        """
+        self.model.set_params(**self.best_params_)
+        self.model.fit(X, y)
+        return self
+
+    def get_best_params(self):
         return self.best_params_
 
-    def get_best_score(self) -> float:
-        """
-        Returns the best score obtained during the random search.
-        """
+    def get_best_score(self):
         return self.best_score_
 
-    def get_results(self) -> List[Dict[str, Any]]:
-        """
-        Returns the results of the random search.
-        """
+    def get_results(self):
         return self.results_
-
-# Example usage
-if __name__ == "__main__":
-    from sklearn.datasets import load_iris
-    from sklearn.tree import DecisionTreeClassifier
-
-    # Load dataset
-    iris = load_iris()
-    X, y = iris.data, iris.target
-
-    # Define the model
-    model = DecisionTreeClassifier()
-
-    # Define the parameter distributions
-    param_distributions = {
-        'max_depth': [3, 5, 7, None],
-        'min_samples_split': [2, 3, 4, 5]
-    }
-
-    # Perform random search
-    random_search = RandomSearch(model, param_distributions, n_iter=10, random_state=42)
-    random_search.fit(X, y)
-
-    # Print the best parameters and best score
-    print("Best Parameters:", random_search.get_best_params())
-    print("Best Score:", random_search.get_best_score())
-
-    # Print all results
-    print("Random Search Results:", random_search.get_results())

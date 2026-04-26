@@ -2,19 +2,8 @@ import numpy as np
 import random
 
 def cross_val_score(model, X, y, cv=5, random_state=None):
-    """
-    Perform k-fold cross-validation.
+    #Perform k-fold cross-validation.
 
-    Parameters:
-    - model: object, the model to evaluate. Must have fit and score methods.
-    - X: array-like, feature set.
-    - y: array-like, labels.
-    - cv: int, number of folds.
-    - random_state: int, seed used by the random number generator.
-
-    Returns:
-    - scores: list, cross-validation scores.
-    """
     if random_state is not None:
         np.random.seed(random_state)
         random.seed(random_state)
@@ -48,22 +37,3 @@ def cross_val_score(model, X, y, cv=5, random_state=None):
         current = stop
 
     return scores
-
-# Example usage:
-#class SimpleModel:
-    #def fit(self, X, y):
-        ## A dummy fit method
-        #pass
-    
-    #def score(self, X, y):
-        ## A dummy score method returning a random score
-        #return random.random()
-
-## Load dataset
-#digits = load_digits()
-#X, y = digits.data, digits.target
-
-## Create and evaluate model
-#model = SimpleModel()
-#scores = cross_val_score(model, X, y, cv=5, random_state=42)
-#print("Cross-validation scores:", scores)

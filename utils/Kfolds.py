@@ -3,14 +3,7 @@ from typing import Iterator, Tuple
 
 class KFold:
     def __init__(self, n_splits: int = 5, shuffle: bool = False, random_state: int = None):
-        """
-        Initializes the KFold cross-validator.
-
-        Parameters:
-        - n_splits: int, number of folds.
-        - shuffle: bool, whether to shuffle the data before splitting into batches.
-        - random_state: int, seed used by the random number generator.
-        """
+        #K-fold index generator (similar to scikit-learn's `KFold`)
         if n_splits < 2:
             raise ValueError("n_splits must be at least 2.")
         
@@ -19,17 +12,7 @@ class KFold:
         self.random_state = random_state
 
     def split(self, X: np.ndarray, y: np.ndarray = None) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
-        """
-        Generates indices to split data into training and test set.
-
-        Parameters:
-        - X: array-like, shape (n_samples, n_features) or (n_samples,)
-        - y: array-like, shape (n_samples,), default=None
-
-        Yields:
-        - train_indices: array, the training set indices for that split.
-        - test_indices: array, the testing set indices for that split.
-        """
+        #Yield `(train_indices, test_indices)` for each fold
         n_samples = len(X)
         indices = np.arange(n_samples)
         
@@ -48,30 +31,3 @@ class KFold:
             train_indices = np.concatenate((indices[:start], indices[stop:]))
             yield train_indices, test_indices
             current = stop
-
-# Example usage
-if __name__ == "__main__":
-    from sklearn.datasets import load_iris
-    from sklearn.tree import DecisionTreeClassifier
-
-    # Load dataset
-    iris = load_iris()
-    X, y = iris.data, iris.target
-
-    # Define the model
-    model = DecisionTreeClassifier()
-
-    # Initialize KFold
-    kf = KFold(n_splits=5, shuffle=True, random_state=42)
-
-    # Perform k-fold cross-validation
-    scores = []
-    for train_index, test_index in kf.split(X, y):
-        X_train, X_test = X[train_index], X[test_index]
-        y_train, y_test = y[train_index], y[test_index]
-        
-        model.fit(X_train, y_train)
-        score = model.score(X_test, y_test)
-        scores.append(score)
-
-    print("K-Fold Cross-Validation Scores:", scores)

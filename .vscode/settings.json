@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^python -m pytest test_dt\\.py test_dtr\\.py test_knn\\.py test_lgr\\.py test_nb\\.py test_rf\\.py test_eda\\.py test_lg\\.py test_cv\\.py test_metrics\\.py 2>&1 \\| head -100$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

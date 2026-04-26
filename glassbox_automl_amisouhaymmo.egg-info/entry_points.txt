@@ -1,0 +1,4 @@
+[console_scripts]
+glassbox-chat-sim = glassbox.agent.chat_sim:main
+glassbox-mcp = glassbox.agent.mcp_server:main
+glassbox-mcp-http = glassbox.agent.mcp_server:main_http

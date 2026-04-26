@@ -1,91 +1,72 @@
+"""GlassBox GridSearch with K-Fold cross-validation scoring."""
+
 import numpy as np
 import itertools
 from typing import Dict, Any, List
 
-class GridSearch:
-    def __init__(self, model, param_grid: Dict[str, List[Any]]):
-        """
-        Initializes the GridSearch with a model and a parameter grid.
 
-        Parameters:
-        - model: The machine learning model to be tuned.
-        - param_grid: Dictionary where keys are parameter names and values are lists of parameter settings to try.
-        """
+class GridSearch:
+    """Exhaustive hyperparameter search with cross-validation."""
+
+    def __init__(self, model, param_grid: Dict[str, List[Any]],
+                 cv: int = 5, scoring=None):
         self.model = model
         self.param_grid = param_grid
+        self.cv = cv
+        self.scoring = scoring
         self.best_params_ = None
         self.best_score_ = -np.inf
         self.results_ = []
 
-    def fit(self, X, y):
-        """
-        Performs grid search over the parameter grid.
+    def _cv_score(self, X, y, params):
+        """Return mean CV score for one parameter setting."""
+        self.model.set_params(**params)
+        n_samples = len(y)
+        indices = np.arange(n_samples)
+        np.random.shuffle(indices)
+        fold_sizes = np.full(self.cv, n_samples // self.cv, dtype=int)
+        fold_sizes[:n_samples % self.cv] += 1
+        current = 0
+        scores = []
+        for fold_size in fold_sizes:
+            test_idx = indices[current:current + fold_size]
+            train_idx = np.concatenate([indices[:current],
+                                        indices[current + fold_size:]])
+            X_train, X_test = X[train_idx], X[test_idx]
+            y_train, y_test = y[train_idx], y[test_idx]
+            self.model.fit(X_train, y_train)
+            if self.scoring:
+                s = self.scoring(y_test, self.model.predict(X_test))
+            else:
+                s = self.model.score(X_test, y_test)
+            scores.append(s)
+            current += fold_size
+        return float(np.mean(scores))
 
-        Parameters:
-        - X: Training data.
-        - y: Training labels.
-        """
+    def fit(self, X, y):
+        X, y = np.asarray(X), np.asarray(y)
         param_names = list(self.param_grid.keys())
         param_values = list(self.param_grid.values())
-        
+        self.results_ = []
+        self.best_score_ = -np.inf
+
         for combination in itertools.product(*param_values):
             params = dict(zip(param_names, combination))
-            self.model.set_params(**params)
-            self.model.fit(X, y)
-            score = self.model.score(X, y)
-            
-            self.results_.append({
-                'params': params,
-                'score': score
-            })
-
+            score = self._cv_score(X, y, params)
+            self.results_.append({'params': params, 'mean_cv_score': score})
             if score > self.best_score_:
                 self.best_score_ = score
                 self.best_params_ = params
 
-    def get_best_params(self) -> Dict[str, Any]:
-        """
-        Returns the best parameters found during the grid search.
-        """
+        self.model.set_params(**self.best_params_)
+        self.model.fit(X, y)
+        return self
+
+    def get_best_params(self):
         return self.best_params_
 
-    def get_best_score(self) -> float:
-        """
-        Returns the best score obtained during the grid search.
-        """
+    def get_best_score(self):
         return self.best_score_
 
-    def get_results(self) -> List[Dict[str, Any]]:
-        """
-        Returns the results of the grid search.
-        """
+    def get_results(self):
         return self.results_
-
-# Example usage
-if __name__ == "__main__":
-    from sklearn.datasets import load_iris
-    from sklearn.tree import DecisionTreeClassifier
-
-    # Load dataset
-    iris = load_iris()
-    X, y = iris.data, iris.target
-
-    # Define the model
-    model = DecisionTreeClassifier()
-
-    # Define the parameter grid
-    param_grid = {
-        'max_depth': [3, 5, 7],
-        'min_samples_split': [2, 3, 4]
-    }
-
-    # Perform grid search
-    grid_search = GridSearch(model, param_grid)
-    grid_search.fit(X, y)
-
-    # Print the best parameters and best score
-    print("Best Parameters:", grid_search.get_best_params())
-    print("Best Score:", grid_search.get_best_score())
-
-    # Print all results
-    print("Grid Search Results:", grid_search.get_results())
